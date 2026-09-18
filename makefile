@@ -1,4 +1,4 @@
-# 중요: Makefile에서 명령어 앞의 공백은 반드시 'Tab' 키로 띄워야 합니다!
+
 CC = gcc
 AS = nasm
 LD = ld
