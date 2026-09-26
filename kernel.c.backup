@@ -1,0 +1,111 @@
+// VGA 텍스트 모드의 화면 표준 크기 (가로 80칸, 세로 25줄)
+#define VGA_WIDTH 80
+#define VGA_HEIGHT 25
+#define VIDEO_MEMORY (char *)0xB8000
+
+// 현재 화면의 커서 위치를 기억할 전역 변수
+int cursor_x = 0;
+int cursor_y = 0;
+
+// 화면 전체를 공백으로 깨끗하게 비우는 함수
+void clear_screen(void) {
+    char *video = VIDEO_MEMORY;
+    for (int i = 0; i < VGA_WIDTH * VGA_HEIGHT * 2; i += 2) {
+        video[i] = ' ';     // 공백 문자 채우기
+        video[i+1] = 0x07;  // 검은 배경에 흰 글씨 속성
+    }
+    cursor_x = 0;
+    cursor_y = 0;
+}
+
+//화면을 한 줄 위로 오리는 스크롤 함수
+void scroll_screen(void){
+    char *video = VIDEO_MEMORY;
+
+    //1줄 (80글자 x 2바이트) 1줄 부터 24줄까지 0부터 23줄로 복사
+    for(int i=0;i<(VGA_HEIGHT-1) * VGA_WIDTH*2;i++){
+        video[i] = video[i+VGA_WIDTH *2];
+    }
+
+    //마지막 줄 공백으로 채우기
+    int last_line_offset = (VGA_HEIGHT -1)*VGA_WIDTH*2;
+    for(int i=last_line_offset;i<VGA_HEIGHT*VGA_WIDTH*2;i+=2){
+        video[i]=' ';
+        video[i+1] = 0x0A;
+    }
+}
+void putchar(char c) {
+    char *video = VIDEO_MEMORY;
+    
+    // ⭐ 새로 추가: 백스페이스 처리
+    if (c == '\b') {
+        backspace();
+        return;
+    }
+    
+    if (c == '\n') {
+        cursor_x = 0;
+        cursor_y++;
+        if (cursor_y >= VGA_HEIGHT) {
+            scroll_screen();
+            cursor_y = VGA_HEIGHT - 1;
+        }
+        return;
+    }
+    
+    if (c == '\r') {
+        cursor_x = 0;
+        return;
+    }
+    
+    // 일반 문자 출력 (기존 코드)
+    int offset = (cursor_y * VGA_WIDTH + cursor_x) * 2;
+    video[offset] = c;
+    video[offset + 1] = 0x0A;
+    
+    cursor_x++;
+    if (cursor_x >= VGA_WIDTH) {
+        cursor_x = 0;
+        cursor_y++;
+        if (cursor_y >= VGA_HEIGHT) {
+            scroll_screen();
+            cursor_y = VGA_HEIGHT - 1;
+        }
+    }
+}
+
+
+
+
+// 문자열을 넘겨받아 putchar를 연속으로 호출하는 커널 전용 출력 함수
+void kprint(const char *str) {
+    int i = 0;
+    while (str[i] != '\0') {
+        putchar(str[i]);
+        i++;
+    }
+}
+
+
+// 커널 메인 함수
+void kernel_main(void) {
+    clear_screen(); 
+
+    
+    kprint("  _____  _____ _      __     __       ____   ____  \n");
+    kprint(" |  __ \\|_   _| |     \\ \\   / /      / __ \\ / ____| \n");
+    kprint(" | |__) | | | | |      \\ \\_/ /_____| |  | | (___   \n");
+    kprint(" |  ___/  | | | |       \\   /|______| |  | |\\___ \\  \n");
+    kprint(" | |     _| |_| |____    | |        | |__| |____) |\n");
+    kprint(" |_|    |_____|______|   |_|         \\____/|_____/ \n");
+    kprint("\n");
+    kprint("====================================================\n");
+    kprint("  Booting Completed Successfully.\n");
+    kprint("====================================================\n");
+    kprint("\n");
+    
+    kprint("Welcome to pily-OS Kernel!\n");
+    
+}
+
+
