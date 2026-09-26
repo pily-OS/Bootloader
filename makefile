@@ -1,4 +1,3 @@
-
 CC = gcc
 AS = nasm
 LD = ld
@@ -11,11 +10,14 @@ all: mykernel.bin
 boot.o: boot.asm
 	$(AS) -f elf32 boot.asm -o boot.o
 
+gdt.o: gdt.asm
+	$(AS) -f elf32 gdt.asm -o gdt.o
+
 kernel.o: kernel.c
 	$(CC) $(CFLAGS) kernel.c -o kernel.o
 
-mykernel.bin: boot.o kernel.o
-	$(LD) $(LDFLAGS) -o mykernel.bin boot.o kernel.o
+mykernel.bin: boot.o gdt.o kernel.o
+	$(LD) $(LDFLAGS) -o mykernel.bin boot.o gdt.o kernel.o
 
 run: mykernel.bin
 	qemu-system-x86_64 -kernel mykernel.bin

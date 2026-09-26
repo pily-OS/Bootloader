@@ -17,14 +17,14 @@ int current_fg_color = COLOR_LIGHT_GREEN;
 int current_bg_color = 0x00;
 
 // ============================================
-// 속성 바이트 생성 함수 (새로 추가)
+// 속성 바이트 생성 함수
 // ============================================
 char make_color_attribute(int fg, int bg) {
     return (char)((bg << 4) | fg);
 }
 
 // ============================================
-// 색상 변경 함수 (새로 추가)
+// 색상 변경 함수
 // ============================================
 void set_text_color(int fg, int bg) {
     current_fg_color = fg;
@@ -40,7 +40,7 @@ void reset_colors(void) {
 void clear_screen(void) {
     char *video = VIDEO_MEMORY;
     for (int i = 0; i < VGA_WIDTH * VGA_HEIGHT * 2; i += 2) {
-        video[i] = ' ';     // 공백 문자 채우기
+        video[i] = ' ';
         video[i + 1] = make_color_attribute(current_fg_color, current_bg_color);
     }
     cursor_x = 0;
@@ -64,36 +64,30 @@ void scroll_screen(void) {
     }
 }
 
-// 백스페이스 함수 (수정됨: 컬러 지원)
+// 백스페이스 함수
 void backspace(void) {
     char *video = VIDEO_MEMORY;
     
-    // 커서가 맨 앞이면 동작 안함
     if (cursor_x == 0 && cursor_y == 0) {
         return;
     }
     
-    // 같은 줄에서 한 글자 뒤로 이동
     if (cursor_x > 0) {
         cursor_x--;
-    } 
-    // 같은 줄의 맨 앞이면 이전 줄의 맨 뒤로 이동
-    else {
+    } else {
         cursor_y--;
         cursor_x = VGA_WIDTH - 1;
     }
     
-    // 화면의 해당 위치를 공백으로 덮어쓰기
     int offset = (cursor_y * VGA_WIDTH + cursor_x) * 2;
     video[offset] = ' ';
     video[offset + 1] = make_color_attribute(current_fg_color, current_bg_color);
 }
 
-// 문자를 하나씩 출력하는 함수 (수정됨: 컬러 지원)
+// 문자를 하나씩 출력하는 함수
 void putchar(char c) {
     char *video = VIDEO_MEMORY;
     
-    // 백스페이스 처리
     if (c == '\b') {
         backspace();
         return;
@@ -114,7 +108,6 @@ void putchar(char c) {
         return;
     }
     
-    // 일반 문자 출력 (컬러 지원)
     int offset = (cursor_y * VGA_WIDTH + cursor_x) * 2;
     video[offset] = c;
     video[offset + 1] = make_color_attribute(current_fg_color, current_bg_color);
@@ -130,7 +123,7 @@ void putchar(char c) {
     }
 }
 
-// 문자열을 넘겨받아 putchar를 연속으로 호출하는 커널 전용 출력 함수
+// 문자열을 넘겨받아 putchar를 연속으로 호출
 void kprint(const char *str) {
     int i = 0;
     while (str[i] != '\0') {
@@ -139,10 +132,33 @@ void kprint(const char *str) {
     }
 }
 
-// 커널 메인 함수
-void kernel_main(void) {
-    clear_screen(); 
+// ============================================
+// ============================================
+// [Phase 2-1] GDT 관련 코드 (여기부터 추가!)
+// ============================================
+// ============================================
 
+// 어셈블리에서 정의한 함수 선언
+extern void gdt_load(void);
+
+// GDT 초기화 함수
+void gdt_init(void) {
+    // 현재: GRUB의 GDT 사용
+    // 우리가 만든 GDT를 CPU에 로드
+    gdt_load();
+    
+    kprint("[GDT] Initialized\n");
+}
+
+// ============================================
+// ============================================
+// 커널 메인 함수
+// ============================================
+// ============================================
+
+void kernel_main(void) {
+    clear_screen();
+    
     // 로고 출력 (연두색)
     set_text_color(COLOR_LIGHT_GREEN, 0x00);
     kprint("  _____  _____ _      __     __       ____   ____  \n");
@@ -164,32 +180,18 @@ void kernel_main(void) {
     // 구분선 (노란색)
     set_text_color(COLOR_YELLOW, 0x00);
     kprint("====================================================\n");
+    reset_colors();
+    kprint("\n");
+    
+    //  [Phase 2-1] GDT 초기화 - 여기서 호출!
+    gdt_init();
+    
     kprint("\n");
     
     // 환영 메시지 (빨간색)
     set_text_color(COLOR_LIGHT_RED, 0x00);
-    kprint("Welcome to pily-OS Kernel!\n");
-    
-    // Phase 1 테스트 메시지
-    reset_colors();
-    kprint("\n");
-    set_text_color(COLOR_LIGHT_CYAN, 0x00);
-    kprint("--- Phase 1 Features ---\n");
+    kprint("Welcome to pily-OS Kernel - Phase 2!\n");
     reset_colors();
     
-    kprint("Color support: ");
-    set_text_color(COLOR_LIGHT_RED, 0x00);
-    kprint("RED ");
-    set_text_color(COLOR_YELLOW, 0x00);
-    kprint("YELLOW ");
-    set_text_color(COLOR_LIGHT_GREEN, 0x00);
-    kprint("GREEN\n");
-    reset_colors();
-    
-    kprint("Backspace test: HELLO");
-    putchar('\b');
-    putchar('\b');
-    kprint("!\n");
-    
-    kprint("\nPhase 1 Complete!\n");
+    kprint("\nSystem ready.\n");
 }
