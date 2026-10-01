@@ -18,7 +18,7 @@ cd my_64bit_os
 make run
 ```
 
-## 📌 Upcoming Milestones (향후 개발 목표)
+##  Upcoming Milestones (향후 개발 목표)
 
 - [ ] **Phase 1: Advanced VGA Screen Driver (화면 출력 드라이버 고도화)**
   * Implement standard character output functions with escape sequence support (`\n` newline, `\b` backspace for character deletion).
